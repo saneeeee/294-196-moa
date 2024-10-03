@@ -4,6 +4,8 @@ import json
 import os
 from tqdm import tqdm
 from urllib.parse import urljoin
+import fire
+from pathlib import Path
 
 def scrape_dmv_handbook_page(url):
     response = requests.get(url)
@@ -97,19 +99,19 @@ def save_dataset(dataset, output_dir):
             with open(os.path.join(output_dir, section["text_location"]), "w", encoding="utf-8") as f:
                 f.write(content)
 
-if __name__ == "__main__":
-    url = "https://www.dmv.ca.gov/portal/handbook/vehicle-industry-registration-procedures-manual-2/introduction/"
-    output_dir = "dataset"
+def main(output_dir, url="https://www.dmv.ca.gov/portal/handbook/vehicle-industry-registration-procedures-manual-2/introduction/"):
+    output_path = Path(output_dir)
+    output_path.mkdir(parents=True, exist_ok=True)
     
     print("Scraping DMV handbook...")
     dataset = scrape_dmv_handbook(url)
     
     print("\nSaving dataset and content...")
-    save_dataset(dataset, output_dir)
+    save_dataset(dataset, output_path)
     
     print("\nDone!")
     
-    print("\nDataset description:")
-    with open(os.path.join(output_dir, "dataset_description.json"), "r") as f:
-        dataset_description = json.load(f)
-        print(json.dumps(dataset_description, indent=2))
+    print(f"Data saved to {output_path}")
+
+if __name__ == "__main__":
+    fire.Fire(main)

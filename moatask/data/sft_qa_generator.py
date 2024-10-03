@@ -4,7 +4,7 @@ import json
 import re
 import os
 
-from sft_prompt import get_system_prompt, get_user_prompt
+from moatask.configs.sft_prompt import get_system_prompt, get_user_prompt
 
 def sft_qa_pairs(scrape_file_name, oaiclient, n_questions=100):
 

@@ -1,6 +1,12 @@
+# project specific data files
 dataset/
+qa_pairs/
+**.txt
+
+# environment configuration files
 .env
 env.sh
-**.txt
+
+# common python files
 **/__pycache__/
-qa_pairs/
+*.egg-info/
