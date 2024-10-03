@@ -2,3 +2,5 @@ dataset/
 .env
 env.sh
 **.txt
+**/__pycache__/
+qa_pairs/
