@@ -6,7 +6,7 @@ Solving real world tasks reliably with mixture of agents 🕵️‍♂️
     - **TODO:** configure dependencies
     - there is a preliminary dependency list in environment.yml, you might want to change the name if you already have a `llama` conda environment.
 
-2. run `pip install -e` from root
+2. run `pip install -e .` from root
 
 ### Getting datasets
 Be careful when running website scraping jobs from Berkeley machines, some clusters explicitly ban this because UC blocks such machines.
