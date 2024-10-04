@@ -2,6 +2,7 @@
 dataset/
 qa_pairs/
 **.txt
+**.zip
 
 # environment configuration files
 .env
