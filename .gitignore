@@ -1,6 +1,7 @@
 # project specific data files
 dataset/
 qa_pairs/
+openai_finetune_data/
 **.txt
 **.zip
 
