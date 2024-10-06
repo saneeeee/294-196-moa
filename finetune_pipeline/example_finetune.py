@@ -19,10 +19,8 @@ huggingface_hub.login(token=huggingface_token)
 train_config = TRAIN_CONFIG()
 huggingface_hub
 train_config.model_name = "meta-llama/Llama-3.2-3B"
-train_config.num_epochs = 1
 train_config.run_validation = False
 train_config.num_epochs = 1
-train_config.run_validation = False
 train_config.gradient_accumulation_steps = 4
 train_config.batch_size_training = 1
 train_config.lr = 3e-4
