@@ -4,6 +4,14 @@ from llama_recipes.configs import train_config as TRAIN_CONFIG
 import huggingface_hub
 from dotenv import load_dotenv
 import os 
+from llama_recipes.configs.datasets import samsum_dataset
+from llama_recipes.utils.dataset_utils import get_dataloader
+from peft import get_peft_model, prepare_model_for_kbit_training, LoraConfig
+from dataclasses import asdict
+from llama_recipes.configs import lora_config as LORA_CONFIG
+import torch.optim as optim
+from llama_recipes.utils.train_utils import train
+from torch.optim.lr_scheduler import StepLR
 
 load_dotenv()
 huggingface_token = os.getenv("HUGGINGFACE_TOKEN")
@@ -70,3 +78,44 @@ model_input = tokenizer(eval_prompt, return_tensors="pt").to("cuda")
 model.eval()
 with torch.inference_mode():
     print(tokenizer.decode(model.generate(**model_input, max_new_tokens=100)[0], skip_special_tokens=True))
+
+samsum_dataset.trust_remote_code = True
+
+train_dataloader = get_dataloader(tokenizer, samsum_dataset, train_config)
+eval_dataloader = get_dataloader(tokenizer, samsum_dataset, train_config, "val")
+
+lora_config = LORA_CONFIG()
+lora_config.r = 8
+lora_config.lora_alpha = 32
+lora_dropout: float=0.01
+
+peft_config = LoraConfig(**asdict(lora_config))
+
+model = prepare_model_for_kbit_training(model)
+model = get_peft_model(model, peft_config)
+
+model.train()
+
+optimizer = optim.AdamW(
+            model.parameters(),
+            lr=train_config.lr,
+            weight_decay=train_config.weight_decay,
+        )
+scheduler = StepLR(optimizer, step_size=1, gamma=train_config.gamma)
+
+# Start the training process
+results = train(
+    model,
+    train_dataloader,
+    eval_dataloader,
+    tokenizer,
+    optimizer,
+    scheduler,
+    train_config.gradient_accumulation_steps,
+    train_config,
+    None,
+    None,
+    None,
+    wandb_run=None,
+)
+
