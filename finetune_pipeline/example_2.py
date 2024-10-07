@@ -15,8 +15,13 @@ from glob import glob
 import datasets
 from datasets import Dataset, DatasetDict
 from transformers import BitsAndBytesConfig, DataCollatorForLanguageModeling
-from torch.utils.data import DataLoader
-
+from llama_recipes.utils.dataset_utils import get_dataloader
+from peft import get_peft_model, prepare_model_for_kbit_training, LoraConfig
+from dataclasses import asdict
+from llama_recipes.configs import lora_config as LORA_CONFIG
+import torch.optim as optim
+from llama_recipes.utils.train_utils import train
+from torch.optim.lr_scheduler import StepLR
 
 # load all of the files in the qa_pairs directory
 qa_pairs = "../qa_pairs"
@@ -53,49 +58,52 @@ def preprocess_data(data):
                     if next_turn['role'].lower() == 'assistant':
                         assistant_content = next_turn['content'].strip()
                         # Create a prompt similar to SAMSum's prompt
-                        prompt = f"Question: {user_content}\nAnswer:"
+                        prompt = f"{user_content}"
                         inputs.append(prompt)
                         targets.append(assistant_content)
     return inputs, targets
 
 # maket the dataset to be the DatasetDict as well
 inputs, targets = preprocess_data(all_dialogs)
+#print(f"Sample input: {inputs[0]}")
+#print(f"Sample target: {targets[0]}")
 qa_pairs = Dataset.from_dict({"input_text": inputs, "target_text": targets})
-qa_pairs = dataset.train_test_split(test_size=0.1)
-
-# load the tokenizer 
+qa_pairs = qa_pairs.train_test_split(test_size=0.1, shuffle=False)
+#print(qa_pairs)
+#print(qa_pairs)
+# # load the tokenizer 
 tokenizer = AutoTokenizer.from_pretrained("meta-llama/Llama-3.2-3B")
 tokenizer.pad_token = tokenizer.eos_token
 
-special_tokens_dict = {"additional_special_tokens": ["<user>", "<assistant>"]}
-tokenizer.add_special_tokens(special_tokens_dict)
 
-def get_preprocessed_qa(dataset_config, tokenizer,split):
+def get_preprocessed_qa(dataset, tokenizer,split):
     prompt = (
-        f"Answer the following question:\n"
+        f"Answer the following question:\n{{question}}\n---\nAnswer:\n"
     )
-    
     def apply_prompt_template(sample):
         return {
-            "prompt" : prompt,
+            "prompt" : prompt.format(question=sample["input_text"]),
             "answer" : sample["target_text"]
         }
-    
-    dataset = dataset.map(apply_prompt_template, remove_columns=list(dataset.features))
+    dataset = dataset.map(apply_prompt_template, remove_columns=["input_text", "target_text"])
     def tokenize_add_label(sample):
         prompt = tokenizer.encode(tokenizer.bos_token + sample["prompt"], add_special_tokens=False)
-        answer = tokenizer.encode(sample["target_text"] + tokenizer.eos_token, add_special_tokens=False)
-        
+        answer = tokenizer.encode(sample["answer"] + tokenizer.eos_token, add_special_tokens=False)
         sample = {
             "input_ids": prompt + answer,
-            "attention_mask": [1] * len(prompt) + [1] * len(answer),
+            "attention_mask": [1] * (len(prompt) + len(answer)),
             "labels": [-100] * len(prompt) + answer
         }
-        
         return sample
-    
-    dataset = dataset.map(tokenize_add_label, remove_columns=;ist(dataset.features))
+    dataset = dataset.map(tokenize_add_label, remove_columns=["prompt", "answer"])
     return dataset
+
+# test = get_preprocessed_qa(qa_pairs, tokenizer, "train")
+# # print the prompt 
+# first_train_prompt = test["train"][0]["prompt"]
+# print(f"First train prompt : {first_train_prompt}")
+# first_train_answer = test["train"][0]["answer"]
+# print(f"first_train_answer : {first_train_answer}")
 
 
 def get_dataloader_kwargs(train_config, dataset, dataset_processer, mode):
@@ -129,9 +137,8 @@ def get_dataloader_kwargs(train_config, dataset, dataset_processer, mode):
         raise ValueError(f"Unknown batching strategy: {train_config.batching_strategy}")
     return kwargs
 
-
-def get_dataloader(tokenizer, dataset_config, train_config, split = "train"):
-    dataset = get_preprocessed_qa(dataset, dataset_config, tokenizer, split)
+def get_dataloader(tokenizer, dataset, train_config, split = "train"):
+    dataset = get_preprocessed_qa(dataset, tokenizer, split)[split]
     dl_kwargs = get_dataloader_kwargs(train_config, dataset, tokenizer, split)
     
     if split == "train" and train_config.batching_strategy == "packing":
@@ -139,6 +146,7 @@ def get_dataloader(tokenizer, dataset_config, train_config, split = "train"):
     
     dataloader = torch.utils.data.DataLoader(dataset, **dl_kwargs)
     return dataloader
+
 
 load_dotenv()
 huggingface_token = os.getenv("HUGGINGFACE_TOKEN")
@@ -158,4 +166,52 @@ train_config.batching_strategy = "packing"
 train_config.output_dir = "meta-llama-samsum"
 train_config.use_peft = True
 
-train_loader = get_dataloader(tokenizer, dataset, train_config, split="train")
+train_loader = get_dataloader(tokenizer, qa_pairs, train_config, split="train")
+val_loader = get_dataloader(tokenizer, qa_pairs, train_config, split="test")
+
+from transformers import BitsAndBytesConfig
+config = BitsAndBytesConfig(
+    load_in_8bit=True,
+)
+model = LlamaForCausalLM.from_pretrained(
+            train_config.model_name,
+            device_map="auto",
+            quantization_config=config,
+            use_cache=False,
+            attn_implementation="sdpa" if train_config.use_fast_kernels else None,
+            torch_dtype=torch.float16,
+        )
+lora_config = LORA_CONFIG()
+lora_config.r = 8
+lora_config.lora_alpha = 32
+lora_dropout: float=0.01
+
+peft_config = LoraConfig(**asdict(lora_config))
+
+model = prepare_model_for_kbit_training(model)
+model = get_peft_model(model, peft_config)
+
+model.train()
+
+optimizer = optim.AdamW(
+            model.parameters(),
+            lr=train_config.lr,
+            weight_decay=train_config.weight_decay,
+        )
+scheduler = StepLR(optimizer, step_size=1, gamma=train_config.gamma)
+
+# Start the training process
+results = train(
+    model,
+    train_loader,
+    val_loader,
+    tokenizer,
+    optimizer,
+    scheduler,
+    train_config.gradient_accumulation_steps,
+    train_config,
+    None,
+    None,
+    None,
+    wandb_run=None,
+)
