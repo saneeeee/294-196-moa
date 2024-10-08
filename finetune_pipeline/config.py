@@ -10,7 +10,7 @@ huggingface_token = os.getenv("HUGGINGFACE_TOKEN")
 train_config = TRAIN_CONFIG()
 train_config.model_name = "meta-llama/Llama-3.2-3B"
 train_config.run_validation = False
-train_config.num_epochs = 1
+train_config.num_epochs = 10
 train_config.gradient_accumulation_steps = 4
 train_config.batch_size_training = 1
 train_config.lr = 3e-4
@@ -18,7 +18,7 @@ train_config.use_fast_kernels = True
 train_config.use_fp16 = True
 train_config.context_length = 1024 if torch.cuda.get_device_properties(0).total_memory < 16e9 else 2048
 train_config.batching_strategy = "packing"
-train_config.output_dir = "meta-llama-samsum"
+train_config.output_dir = "meta-llama-qa"
 train_config.use_peft = True
 
 lora_config = LORA_CONFIG()

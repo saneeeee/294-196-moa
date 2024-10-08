@@ -5,6 +5,8 @@ from huggingface_hub import login
 from config import train_config, lora_config, huggingface_token
 from data_preparation import prepare_data, tokenizer
 from model_preparation import prepare_model
+from transformers import AutoTokenizer, LlamaForCausalLM
+import torch
 
 def main():
     login(token=huggingface_token)
@@ -35,6 +37,15 @@ def main():
         None,
         wandb_run=None,
     )
+    model.save_pretrained(train_config.output_dir)
 
 if __name__ == "__main__":
     main()
+    model_dir = "meta-llama-qa"
+    tokenizer = AutoTokenizer.from_pretrained("meta-llama/Llama-3.2-3B")
+    tokenizer.pad_token = tokenizer.eos_token
+    model = LlamaForCausalLM.from_pretrained(model_dir)
+    prompt = "Answer the following questions:\nWhat does APCD stand for?\n---\nAnswer:\n"
+    model.eval()
+    with torch.inference_mode():
+        print(tokenizer.decode(model.generate(tokenizer.encode(prompt, return_tensors="pt"), max_length=100)[0], skip_special_tokens=True))

@@ -12,7 +12,7 @@ def prepare_data(directory, tokenizer, train_config):
     
     train_loader = get_dataloader(tokenizer, qa_pairs, train_config, split="train")
     val_loader = get_dataloader(tokenizer, qa_pairs, train_config, split="test")
-    
+    print(f"Length of train_loader: {len(train_loader)}")
     return train_loader, val_loader
 
 tokenizer = AutoTokenizer.from_pretrained("meta-llama/Llama-3.2-3B")
