@@ -1,3 +1,6 @@
 *.sh
 *.log
-meta-llama-qa/
+meta-llama-qa-llama-3.1-8B-Instruct-20-epochs/
+meta-llama-qa-3.2-3b/
+meta-llama-qa-llama-3.1-8B-Instruct-60-epochs/
+meta-llama-qa-llama-3.2-3B-Instruct-60-epochs/

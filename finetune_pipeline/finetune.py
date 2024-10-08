@@ -40,12 +40,12 @@ def main():
     model.save_pretrained(train_config.output_dir)
 
 if __name__ == "__main__":
-    main()
-    model_dir = "meta-llama-qa"
-    tokenizer = AutoTokenizer.from_pretrained("meta-llama/Llama-3.2-3B")
+    #main()
+    model_dir = train_config.output_dir
+    tokenizer = AutoTokenizer.from_pretrained(train_config.model_name)
     tokenizer.pad_token = tokenizer.eos_token
     model = LlamaForCausalLM.from_pretrained(model_dir)
-    prompt = "Answer the following questions:\nWhat does APCD stand for?\n---\nAnswer:\n"
+    prompt = "Answer the following questions:\nWhat are county codes used for?\n---\nAnswer:\n"
     model.eval()
     with torch.inference_mode():
         print(tokenizer.decode(model.generate(tokenizer.encode(prompt, return_tensors="pt"), max_length=100)[0], skip_special_tokens=True))
