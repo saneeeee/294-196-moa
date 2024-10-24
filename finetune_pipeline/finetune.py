@@ -10,8 +10,10 @@ import torch
 
 def main():
     login(token=huggingface_token)
-    
-    train_loader, val_loader = prepare_data("../qa_pairs", tokenizer, train_config)
+    #chapters = ["ch01","ch02","ch05","ch06","ch10","ch11","ch12","ch13","ch14","ch15"]
+    #chapters = ["ch03","ch04","ch08","ch09","ch25","ch26"]
+    chapters = ["ch07","ch16","ch17","ch18","ch19","ch20","ch21","ch22","ch23","ch24"]
+    train_loader, val_loader = prepare_data("../qa_pairs", chapters,tokenizer, train_config)
     model = prepare_model(train_config, lora_config)
     
     model.train()
@@ -40,7 +42,7 @@ def main():
     model.save_pretrained(train_config.output_dir)
 
 if __name__ == "__main__":
-    #main()
+    main()
     model_dir = train_config.output_dir
     tokenizer = AutoTokenizer.from_pretrained(train_config.model_name)
     tokenizer.pad_token = tokenizer.eos_token

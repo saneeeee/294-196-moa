@@ -3,7 +3,7 @@ import json
 from glob import glob
 
 # load all of the files in the qa_pairs directory
-def load_data(directory):
+def load_data(directory, chapters=None):
     """
     Function to load all of the files in the directory
     
@@ -15,7 +15,8 @@ def load_data(directory):
     """
     json_files = glob(os.path.join(directory, "**", "*.json"), recursive=True)
     json_files = sorted(json_files)
-    
+    if chapters:
+        json_files = [f for f in json_files if any(chapter in f for chapter in chapters)]
     all_dialogs = []
     for json_file in json_files:
         with open(json_file, "r") as f:

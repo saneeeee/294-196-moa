@@ -5,8 +5,8 @@ from preprocess import get_dataloader
 from transformers import AutoTokenizer
 from config import train_config
 
-def prepare_data(directory, tokenizer, train_config):
-    all_dialogs = load_data(directory)
+def prepare_data(directory, chapters,tokenizer, train_config):
+    all_dialogs = load_data(directory,chapters)
     inputs, targets = preprocess_data(all_dialogs)
     qa_pairs = Dataset.from_dict({"input_text": inputs, "target_text": targets})
     qa_pairs = qa_pairs.train_test_split(test_size=0.1, shuffle=False)
