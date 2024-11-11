@@ -4,8 +4,8 @@ from dotenv import load_dotenv
 
 
 username = "Phudish"
-repo_name = "meta-llama-qa-llama-3.2-3B-Instruct-100-epochs-third-agent"
-folder_path = "meta-llama-qa-llama-3.2-3B-Instruct-100-epochs-third-agent"
+repo_name = "meta-llama-qa-llama-3.1-70B-Instruct-10-epochs-third-agent"
+folder_path = "meta-llama-qa-llama-3.1-70B-Instruct-10-epochs-third-agent"
 repo_id = f"{username}/{repo_name}"
 
 load_dotenv()

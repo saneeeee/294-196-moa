@@ -4,7 +4,9 @@ from peft import get_peft_model, prepare_model_for_kbit_training, LoraConfig
 from dataclasses import asdict
 
 def prepare_model(train_config, lora_config):
-    config = BitsAndBytesConfig(load_in_8bit=True)
+    # use for 70B only
+    config = BitsAndBytesConfig(load_in_4bit=True)
+    #config = BitsAndBytesConfig(load_in_8bit=True)
     model = LlamaForCausalLM.from_pretrained(
         train_config.model_name,
         device_map="auto",
