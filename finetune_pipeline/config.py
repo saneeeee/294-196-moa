@@ -20,7 +20,7 @@ train_config.use_fast_kernels = True
 train_config.use_fp16 = True
 train_config.context_length = 1024 if torch.cuda.get_device_properties(0).total_memory < 16e9 else 2048
 train_config.batching_strategy = "packing"
-train_config.output_dir = "meta-llama-qa-llama-3.1-70B-Instruct-10-epochs-third-agent"
+train_config.output_dir = "meta-llama-qa-llama-3.2-3B-Instruct-100-epochs-third-agent"
 train_config.use_peft = True
 
 lora_config = LORA_CONFIG()

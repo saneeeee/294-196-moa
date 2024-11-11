@@ -19,3 +19,4 @@ if __name__ == "__main__":
     inference_time = end_time-start_time
     with open("response_3.2_3B.txt", "a") as f:
         f.write(f"Model Name: {model_dir}\nResponse: {response}\nInference Time: {inference_time:.2f} seconds\n\n")
+    
