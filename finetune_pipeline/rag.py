@@ -7,6 +7,7 @@ import numpy as np
 from transformers import AutoTokenizer, LlamaForCausalLM
 from config import train_config
 import torch
+import time 
 # load all of the files in the qa_pairs directory
 def load_data(directory, chapters=None):
     """
@@ -102,12 +103,22 @@ def retrieve_answer(query, nn, sentence_model, llama_model, tokenizer, answers):
     distances, indices = nn.kneighbors(query_embedding)
     retrieved_answers = [answers[idx] for idx in indices[0]]
     print(retrieved_answers)
-    prompt = "Answer the following question based on the information below:\n" + \
-             "\n".join(retrieved_answers) + "\n---\nQuestion: " + query + "\nAnswer:"
+    # prompt = "Answer the following question based on the information below:\n" + \
+    #          "\n".join(retrieved_answers) + "\n---\nQuestion: " + query + "\nAnswer:"
+    prompt = (
+    "You are a knowledgeable assistant. Based on the information provided below, answer the user's question as accurately as possible. "
+    "If the information is unclear or incomplete, make your best attempt to provide a helpful answer using your knowledge.\n\n"
+    "Context:\n" + "\n".join(retrieved_answers) + 
+    "\n---\n"
+    "Question: " + query + 
+    "\nAnswer:")
     llama_model.eval()
+    start_time = time.time()
     with torch.inference_mode():
         response = tokenizer.decode(llama_model.generate(tokenizer.encode(prompt, return_tensors="pt"), max_new_tokens = 100)[0], skip_special_tokens=True)
-    return response
+    end_time = time.time()
+    inference_time = end_time-start_time
+    return response, inference_time
 
 def run_inference(data, query, sentence_model, llama_model, tokenizer):
     """
@@ -126,12 +137,19 @@ def run_inference(data, query, sentence_model, llama_model, tokenizer):
     answers = [pair[1] for pair in data]
     question_embeddings = build_question_embeddings(questions)
     nn = build_nn(question_embeddings)
-    answer = retrieve_answer(query, nn, sentence_model, llama_model, tokenizer, answers)
-    return answer
+    answer,inference_time = retrieve_answer(query, nn, sentence_model, llama_model, tokenizer, answers)
+    return answer, inference_time
 
 if __name__ == "__main__":
     directory = "../qa_pairs"
-    chapters = ["ch07","ch16","ch17","ch18","ch19","ch20","ch21","ch22","ch23","ch24"]
+    # first agent
+    chapters = ["ch01","ch02","ch05","ch06","ch10","ch11","ch12","ch13","ch14","ch15"]
+    # second agent 
+    #chapters = ["ch03","ch04","ch08","ch09","ch25","ch26"]
+    # third agent
+    #chapters = ["ch07","ch16","ch17","ch18","ch19","ch20","ch21","ch22","ch23","ch24"]
+    # all agents
+    #chapters = ["ch01", "ch02", "ch03", "ch04", "ch05", "ch06", "ch07", "ch08", "ch09", "ch10", "ch11", "ch12", "ch13", "ch14", "ch15", "ch16", "ch17", "ch18", "ch19", "ch20", "ch21", "ch22", "ch23", "ch24", "ch25", "ch26"]
     data = load_data(directory, chapters)
     qa_pairs= preprocess_data(data)
     query = "What is reg 5?"
@@ -141,5 +159,9 @@ if __name__ == "__main__":
     tokenizer.pad_token = tokenizer.eos_token
     llama_model = LlamaForCausalLM.from_pretrained(model_dir)
     llama_model.eval()
-    response = run_inference(qa_pairs, query, sentence_model, llama_model, tokenizer)
-    print(response)
+    # TODO inference time and all the respone from three model and big one model 
+    response, inference_time = run_inference(qa_pairs, query, sentence_model, llama_model, tokenizer)
+    with open("response_rag.txt", "a") as f:
+        f.write(f"Model Name: {model_dir}\nResponse: {response}\nInference Time: {inference_time:.2f} seconds\n\n")
+ 
+    #print(f"response : {response}")

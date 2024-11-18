@@ -7,13 +7,41 @@ from data_preparation import prepare_data, tokenizer
 from model_preparation import prepare_model
 from transformers import AutoTokenizer, LlamaForCausalLM
 import torch
+import argparse
+
+def parse_chapters(chapters_str):
+    return chapters_str.split(',')
 
 def main():
+    parser = argparse.ArgumentParser(description="Fine-tune the model with specific chapters")
+    parser.add_argument(
+        "--chapters",
+        type=str,
+        default="ch01,ch02,ch05,ch06,ch10,ch11,ch12,ch13,ch14,ch15",
+        help="Comma-separated list of chapters (e.g., 'ch01,ch02,ch03')"
+    )
+    parser.add_argument(
+        "--agent",
+        type=int,
+        choices=[1, 2, 3, 4],
+        help="Select predefined agent chapters (1, 2, or 3)"
+    )
+    args = parser.parse_args()
+
     login(token=huggingface_token)
-    #chapters = ["ch01","ch02","ch05","ch06","ch10","ch11","ch12","ch13","ch14","ch15"]
-    #chapters = ["ch03","ch04","ch08","ch09","ch25","ch26"]
-    chapters = ["ch07","ch16","ch17","ch18","ch19","ch20","ch21","ch22","ch23","ch24"]
-    train_loader, val_loader = prepare_data("../qa_pairs", chapters,tokenizer, train_config)
+
+    # Predefined chapter sets
+    agent_chapters = {
+        1: ["ch01","ch02","ch05","ch06","ch10","ch11","ch12","ch13","ch14","ch15"],
+        2: ["ch03","ch04","ch08","ch09","ch25","ch26"],
+        3: ["ch07","ch16","ch17","ch18","ch19","ch20","ch21","ch22","ch23","ch24"],
+        4 : ["ch01","ch02","ch03","ch04","ch05","ch06","ch07","ch08","ch09","ch10","ch11","ch12","ch13","ch14","ch15","ch16","ch17","ch18","ch19","ch20","ch21","ch22","ch23","ch24","ch25","ch26"]
+    }
+
+    # Use agent chapters if specified, otherwise use chapters from command line
+    chapters = agent_chapters.get(args.agent) if args.agent else parse_chapters(args.chapters)
+    
+    train_loader, val_loader = prepare_data("../qa_pairs", chapters, tokenizer, train_config)
     model = prepare_model(train_config, lora_config)
     
     model.train()

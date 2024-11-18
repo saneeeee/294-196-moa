@@ -2,3 +2,7 @@
 *.log
 # any file start with meta 
 meta*
+first_agent/
+second_agent/
+third_agent/
+orchestrator/
