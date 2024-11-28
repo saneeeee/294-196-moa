@@ -1,4 +1,3 @@
 *.sh
 *.log
 # any file start with meta 
-meta*
