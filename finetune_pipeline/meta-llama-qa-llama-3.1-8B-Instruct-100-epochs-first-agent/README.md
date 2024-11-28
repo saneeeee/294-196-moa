@@ -1,10 +1,6 @@
 ---
 base_model: meta-llama/Llama-3.1-8B-Instruct
 library_name: peft
-tags:
-  - text-generation
-  - llama
-pipeline_tag: text-generation
 ---
 
 # Model Card for Model ID
