@@ -24,6 +24,35 @@ def load_data(directory, chapters=None):
             all_dialogs.extend(data)
     return all_dialogs
 
+def load_data_for_orchestrator(directory, split):
+    """
+    Load training data maintaining the exact order from each agent's training set
+    """
+    combined_data = []
+    
+    def read_json_file(filepath):
+        data = []
+        with open(filepath, "r") as f:
+            content = f.read()
+            for line in content.strip().split('\n'):
+                if line.strip():
+                    data.append(json.loads(line))
+        return data
+    
+    # Read first agent training data
+    first_agent_data = read_json_file(f"first_agent/first_agent_{split}.json")
+    combined_data.extend(first_agent_data)
+    
+    # Read second agent training data 
+    second_agent_data = read_json_file(f"second_agent/second_agent_{split}.json")
+    combined_data.extend(second_agent_data)
+    
+    # Read third agent training data
+    third_agent_data = read_json_file(f"third_agent/third_agent_{split}.json")
+    combined_data.extend(third_agent_data)
+    
+    return combined_data
+
 def preprocess_data(data):
     """"
     Function to preprocess our data to create the input-target pairs
