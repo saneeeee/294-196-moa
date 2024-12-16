@@ -4,8 +4,8 @@ from dotenv import load_dotenv
 import json
 
 username = "Phudish"
-repo_name = "meta-llama-qa-llama-3.1-70B-Instruct-10-epochs-orchestrator"
-folder_path = "meta-llama-qa-llama-3.1-70B-Instruct-10-epochs-orchestrator"
+repo_name = "meta-llama-qa-llama-3.1-70B-Instruct-10-epochs-orchestrator-new-agent"
+folder_path = "meta-llama-qa-llama-3.1-70B-Instruct-10-epochs-orchestrator-new-agent"
 repo_id = f"{username}/{repo_name}"
 
 load_dotenv()
