@@ -225,7 +225,7 @@ print("Done compiling graph")
 
 roles_str = "Agent1 is resonsible for General Vehicle Registration and Licensing. Agent2 is responsible for Fees, Taxes, and Financial Management. Agent3 is resposible for Special Vehicles, Plates, and Documentation. Do not answer the question directly. In your response, call the appropriate agent, either agent1, agent2 or agent3, based on the question. Your reponse should only contain Invoke agentx where x can be either 1,2 or 3. Question:"
 
-questions = ["Do I have to register my vehicle in California?", "How much does it cost to register a car?", "What are the rules for license plates on my car?", "What kind of special vehicles are allowed on the roads?", "What are all the taxes for owning a car?"]
+questions = ["Who qualifies as a family member for the purposes of vehicle transfer exemptions?", "Can I just use the REG 262 form without having previous buyers sign the title?", "How much does it cost to register a car?", "What are the rules for license plates on my car?", "What kind of special vehicles are allowed on the roads?"]
 # questions = ["What should a buyer do if they believe they paid use tax to a broker?", "What should I do after submitting my DMV 14 form for an address change?"]
 # question = "How to register car for DMV?"
 # question = "How much does it cost to register a car?"
