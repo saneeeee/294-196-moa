@@ -261,4 +261,8 @@ dependencies:
       - wrapt==1.16.0
       - xxhash==3.5.0
       - yarl==1.13.1
+      - ml_dtypes==0.2.0
+      - gast==0.6.0
+      - astunparse==1.6.3
+      - opt-einsum==3.4.0
 # prefix: /home/saner/miniconda3/envs/llama
