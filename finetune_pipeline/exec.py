@@ -113,19 +113,19 @@ def next_agent(state:MessagesState):
 def call_model1(state: MessagesState):
     messages = state['messages'][1].content
     response = gen_model(messages, max_new_tokens=100)
-    # print("Response from model1 : ", response , "\n")
+    print("Response from model1 : ", response , "\n")
     return {"messages": [HumanMessage(content=response[0]['generated_text'])]}
 
 def call_model2(state: MessagesState):
     messages = state['messages'][1].content
     response = gen_model1(messages, max_new_tokens=100)
-    # print("Response from model2: ", response, "\n")
+    print("Response from model2: ", response, "\n")
     return {"messages": [HumanMessage(content=response[0]['generated_text'])]}
 
 def call_model3(state: MessagesState):
     messages = state['messages'][1].content
     response = gen_model2(messages, max_new_tokens=100)
-    # print("Response from model3: ", response, "\n")
+    print("Response from model3: ", response, "\n")
     return {"messages": [HumanMessage(content=response[0]['generated_text'])]}
 
 # def call_orch(state: MessagesState):
@@ -213,9 +213,9 @@ workflow.add_conditional_edges(
 # This compiles it into a LangChain Runnable,
 # meaning you can use it as you would any other runnable.
 # Note that we're (optionally) passing the memory when compiling the graph
-print("Going to compile")
+print("Going to compile graph")
 app = workflow.compile()
-print("Done compile")
+print("Done compiling graph")
 
 # Use the Runnable
 # final_state = app.invoke(
@@ -225,8 +225,8 @@ print("Done compile")
 
 roles_str = "Agent1 is resonsible for General Vehicle Registration and Licensing. Agent2 is responsible for Fees, Taxes, and Financial Management. Agent3 is resposible for Special Vehicles, Plates, and Documentation. Do not answer the question directly. In your response, call the appropriate agent, either agent1, agent2 or agent3, based on the question. Your reponse should only contain Invoke agentx where x can be either 1,2 or 3. Question:"
 
-#questions = ["Do I have to go in person to renew my driver's license?", "How much does it cost to register a car?", "What are the rules for license plates on my car?", "What kind of special vehicles are allowed on the roads?", "What are all the taxes for owning a car?"]
-questions = ["What should a buyer do if they believe they paid use tax to a broker?", "What should I do after submitting my DMV 14 form for an address change?"]
+questions = ["Who qualifies as a family member for the purposes of vehicle transfer exemptions?", "Can I just use the REG 262 form without having previous buyers sign the title?", "How much does it cost to register a car?", "What are the rules for license plates on my car?", "What kind of special vehicles are allowed on the roads?"]
+# questions = ["What should a buyer do if they believe they paid use tax to a broker?", "What should I do after submitting my DMV 14 form for an address change?"]
 # question = "How to register car for DMV?"
 # question = "How much does it cost to register a car?"
 

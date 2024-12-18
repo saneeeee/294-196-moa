@@ -22,7 +22,7 @@ once the web scraping is complete,
 It is preferred to download supervised finetuning Q&A pairs from aws, unless you are tuning the generation
 
 ### Fintuning 
-In order to run finetuning for the small agent you can simply run python finetune_pipeline/ finetune.py --agent[1 or 2 or 3 or 4]. Where 1 is the first agent, 2 is the second agent, 3 is the third agent and 4 is the big orchestrator. However, if you use the orchestrator please make sure that you change the base of the model to 70B in the config.py file in the model name variable. Additionally, that will also contain other hyperparameter that you can changed for the finetuning as well
+In order to run finetuning for the small agent you can simply run python finetune_pipeline/ finetune.py --agent[1 or 2 or 3 or 4]. Where 1 is the first agent, 2 is the second agent, 3 is the third agent and 4 is the big orchestrator. Please use the config.py to set the baseline model that you want to use right now it is set to default to be LlaMa 3.1 8B with 100 epoch. However, if you use the orchestrator please make sure that you change the base of the model to 70B in the config.py file in the model name variable. Additionally, that will also contain other hyperparameter that you can changed for the finetuning as well
 
 ### Running Eval 
 In order to run the baseline (70B) eval simply run python3 finetune_pipeline/eval.py please make sure to change the train, test dataset path and also the model path and running that will give you a json file that store the result including other metric such as the question, target text, response, bleu and rouge score as well 
