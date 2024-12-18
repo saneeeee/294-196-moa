@@ -133,9 +133,11 @@ def retrieve_answer(query, nn, sentence_model, llama_model, tokenizer, answers):
         response = tokenizer.decode(llama_model.generate(input_ids, max_new_tokens=100)[0], skip_special_tokens=True)
     end_time = time.time()
     inference_time = end_time - start_time
-    return response, inference_time
+    # find after only the Answer:
+    answer_only = response[response.find("Answer:") + len("Answer:"):]
+    return response, inference_time, answer_only
 
-def run_inference(data, queries, sentence_model, llama_model, tokenizer, batch_size=8):
+def run_inference(data, queries, sentence_model, llama_model, tokenizer, batch_size=1):
     """
     Function to run inference in batches
     Args:
@@ -157,6 +159,7 @@ def run_inference(data, queries, sentence_model, llama_model, tokenizer, batch_s
     
     responses = []
     inference_times = []
+    answer_only = []
     
     for i in range(0, len(queries), batch_size):
         batch_queries = queries[i:i+batch_size]
@@ -165,10 +168,11 @@ def run_inference(data, queries, sentence_model, llama_model, tokenizer, batch_s
         end_time = time.time()
         batch_inference_time = (end_time - start_time) / len(batch_queries)
         
-        responses.extend([response for response, _ in batch_responses])
+        responses.extend([response for response, _, _ in batch_responses])
+        answer_only.extend([answer for _, _, answer in batch_responses])
         inference_times.extend([batch_inference_time] * len(batch_queries))
     
-    return responses, inference_times
+    return responses, inference_times, answer_only
 
 if __name__ == "__main__":
     train_json_file_path = "/accounts/grad/phudish_p/294-196-moa/finetune_pipeline/orchestrator_new/orchestrator_train.json"
@@ -196,50 +200,52 @@ if __name__ == "__main__":
     llama_model.eval()
     
     # Prepare the question embeddings and NN model
-    questions = [pair[0] for pair in qa_pairs]
-    print(f"Questions: {questions[0:5]}")
-    answers = [pair[1] for pair in qa_pairs]
-    question_embeddings = build_question_embeddings(questions)
-    nn = build_nn(question_embeddings)
+    # questions = [pair[0] for pair in qa_pairs]
+    # print(f"Questions: {questions[0:5]}")
+    # answers = [pair[1] for pair in qa_pairs]
+    # question_embeddings = build_question_embeddings(questions)
+    # nn = build_nn(question_embeddings)
 
     results = []
     queries = [pair[0] for pair in test_qa_pairs]
     target_texts = [pair[1] for pair in test_qa_pairs]
     
     start_time = time.time()  # Start time for the entire process
-    
-    with open("evaluation_results.json", "w") as f:
-        for i in tqdm(range(0, len(queries), 32), desc="Processing Batches"):
-            batch_queries = queries[i:i+32]
-            batch_target_texts = target_texts[i:i+32]
-            batch_responses, batch_inference_times = run_inference(qa_pairs, batch_queries, sentence_model, llama_model, tokenizer)
-            
-            for query, target_text, response, inference_time in zip(batch_queries, batch_target_texts, batch_responses, batch_inference_times):
-                # Compute evaluation metrics
-                bleu_score = bleu.compute(predictions=[response], references=[target_text])['bleu']
-                rouge_score = rouge.compute(predictions=[response], references=[target_text])
+         
+    for i in tqdm(range(0, len(queries), 1), desc="Processing Batches"):
+        batch_queries = queries[i:i+1]
+        batch_target_texts = target_texts[i:i+1]
+        batch_responses, batch_inference_times, batch_answer_only = run_inference(qa_pairs, batch_queries, sentence_model, llama_model, tokenizer)
+        
+        for query, target_text, response, inference_time, answer_only in zip(batch_queries, batch_target_texts, batch_responses, batch_inference_times, batch_answer_only):
+            # Compute evaluation metrics
+            bleu_score = bleu.compute(predictions=[answer_only], references=[target_text])['bleu']
+            rouge_score = rouge.compute(predictions=[answer_only], references=[target_text])
 
-                result = {
-                    'query': query,
-                    'target_text': target_text,
-                    'response': response,
-                    'inference_time': inference_time,
-                    'bleu_score': bleu_score,
-                    'rouge_score': rouge_score
-                }
-                results.append(result)
+            result = {
+                'query': query,
+                'target_text': target_text,
+                'response': response,
+                'inference_time': inference_time,
+                'answer_only': answer_only,
+                'bleu_score': bleu_score,
+                'rouge_score': rouge_score
+            }
+            results.append(result)
 
-                # Write the result to the file
+            # Write the result to the file
+            with open("evaluation_results_baseline_2.json", "a") as f:
                 f.write(json.dumps(result) + "\n")
 
-                # Print the results
-                print(f"Query: {query}")
-                print(f"Target Text: {target_text}")
-                print(f"Response: {response}")
-                print(f"Inference Time: {inference_time:.2f} seconds")
-                print(f"BLEU Score: {bleu_score}")
-                print(f"ROUGE Score: {rouge_score}")
-                print("\n")
+            # Print the results
+            print(f"Query: {query}")
+            print(f"Target Text: {target_text}")
+            print(f"Response: {response}")
+            print(f"Inference Time: {inference_time:.2f} seconds")
+            print(f"Answer Only: {answer_only}")
+            print(f"BLEU Score: {bleu_score}")
+            print(f"ROUGE Score: {rouge_score}")
+            print("\n")
     
     end_time = time.time()  
     total_time = end_time - start_time

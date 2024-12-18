@@ -10,7 +10,10 @@ from transformers import AutoModelForCausalLM
 import os
 from transformers import AutoTokenizer, pipeline
 import torch
-
+# from eval_architecture import load_json_data, preprocess_json_data
+from sentence_transformers import SentenceTransformer
+from sklearn.neighbors import NearestNeighbors
+import json
 
 # Define the tools for the agent to use
 @tool
@@ -72,6 +75,36 @@ model_orch.gradient_checkpointing_enable()
 # print(output)
 # print("End test")
 
+def run_rag(train_data, query):
+    train_question = [pair[0] for pair in train_data]
+    train_answer = [pair[1] for pair in train_data]
+    sentence_model = SentenceTransformer('paraphrase-MiniLM-L6-v2')
+    train_data_embedding = sentence_model.encode(train_question)
+    nn = NearestNeighbors(n_neighbors=3, metric='cosine').fit(train_data_embedding)
+    query_embedding = sentence_model.encode(query)
+    # print(f"Shape of query embedding: {query_embedding.shape}")
+    query_embedding = query_embedding.reshape(1, -1)
+    # Find the nearest neighbors
+    distances, indices = nn.kneighbors(query_embedding)
+    retrieved_answers = [train_answer[idx] for idx in indices[0]]
+    prompt = (
+    "You are a knowledgeable assistant. Based on the information provided below, answer the user's question as accurately as possible. "
+    "If the information is unclear or incomplete, make your best attempt to provide a helpful answer using your knowledge.\n\n"
+    "Context:\n" + "\n".join(retrieved_answers)
+    )
+    return prompt
+
+def load_json_data(file_path):
+    data = []
+    with open(file_path, 'r') as f:
+        for line in f:
+            data.append(json.loads(line))
+    return data
+
+def preprocess_json_data(data):
+    qa_pairs = [(item['input_text'], item['target_text']) for item in data]
+    return qa_pairs
+
 # Define the function that determines whether to continue or not
 def should_continue(state: MessagesState) -> Literal["tools", END]:
     messages = state['messages']
@@ -111,19 +144,35 @@ def next_agent(state:MessagesState):
 
 # Define the function that calls the model
 def call_model1(state: MessagesState):
-    messages = state['messages'][1].content
+    messages = state['messages'][1].content 
+    train_data_path = "/accounts/grad/phudish_p/294-196-moa/finetune_pipeline/first_agent/first_agent_train.json"
+    train_data = load_json_data(train_data_path)
+    train_data = preprocess_json_data(train_data)
+    prompt = run_rag(train_data, messages)
+    messages = prompt + messages
     response = gen_model(messages, max_new_tokens=100)
     # print("Response from model1 : ", response , "\n")
     return {"messages": [HumanMessage(content=response[0]['generated_text'])]}
 
 def call_model2(state: MessagesState):
     messages = state['messages'][1].content
+    train_data_path = "/accounts/grad/phudish_p/294-196-moa/finetune_pipeline/second_agent/second_agent_train.json"
+    train_data = load_json_data(train_data_path)
+    train_data = preprocess_json_data(train_data)
+    prompt = run_rag(train_data, messages)
+    messages = prompt + messages
     response = gen_model1(messages, max_new_tokens=100)
     # print("Response from model2: ", response, "\n")
     return {"messages": [HumanMessage(content=response[0]['generated_text'])]}
 
 def call_model3(state: MessagesState):
     messages = state['messages'][1].content
+    train_data_path = "/accounts/grad/phudish_p/294-196-moa/finetune_pipeline/third_agent/third_agent_train.json"
+    train_data = load_json_data(train_data_path)
+    train_data = preprocess_json_data(train_data)
+    prompt = run_rag(train_data, messages)
+    messages = prompt + messages
+
     response = gen_model2(messages, max_new_tokens=100)
     # print("Response from model3: ", response, "\n")
     return {"messages": [HumanMessage(content=response[0]['generated_text'])]}
@@ -156,7 +205,7 @@ def call_orch(state: MessagesState):
     
     # Extract just the agent invocation
     response_text = response[0]['generated_text']
-    print(f"Response from model orch : {response_text} \n")
+    # print(f"Response from model orch : {response_text} \n")
     if "invoke" in response_text.lower():
         agent_call = response_text.split("OUTPUT:")[-1].strip()
     else:
@@ -213,9 +262,25 @@ workflow.add_conditional_edges(
 # This compiles it into a LangChain Runnable,
 # meaning you can use it as you would any other runnable.
 # Note that we're (optionally) passing the memory when compiling the graph
-print("Going to compile")
+# print("Going to compile")
 app = workflow.compile()
-print("Done compile")
+# print("Done compile")
+
+def excutable(question_str, roles_str):
+
+    print("Processing question ", question_str, "\n")
+
+    final_state = app.invoke(
+        {"messages": [HumanMessage(content=roles_str), HumanMessage(content=question_str)]},
+        config={"configurable": {"thread_id": 42, "callbacks": None}}
+    )
+
+    torch.cuda.empty_cache()
+
+    print("Done invoking.\n")
+    
+    return final_state["messages"][-1].content
+
 
 # Use the Runnable
 # final_state = app.invoke(
@@ -223,26 +288,25 @@ print("Done compile")
 #     config={"configurable": {"thread_id": 42}}
 # )
 
-roles_str = "Agent1 is resonsible for General Vehicle Registration and Licensing. Agent2 is responsible for Fees, Taxes, and Financial Management. Agent3 is resposible for Special Vehicles, Plates, and Documentation. Do not answer the question directly. In your response, call the appropriate agent, either agent1, agent2 or agent3, based on the question. Your reponse should only contain Invoke agentx where x can be either 1,2 or 3. Question:"
+# roles_str = "Agent1 is resonsible for General Vehicle Registration and Licensing. Agent2 is responsible for Fees, Taxes, and Financial Management. Agent3 is resposible for Special Vehicles, Plates, and Documentation. Do not answer the question directly. In your response, call the appropriate agent, either agent1, agent2 or agent3, based on the question. Your reponse should only contain Invoke agentx where x can be either 1,2 or 3. Question:"
 
-#questions = ["Do I have to go in person to renew my driver's license?", "How much does it cost to register a car?", "What are the rules for license plates on my car?", "What kind of special vehicles are allowed on the roads?", "What are all the taxes for owning a car?"]
-questions = ["What should a buyer do if they believe they paid use tax to a broker?", "What should I do after submitting my DMV 14 form for an address change?"]
-# question = "How to register car for DMV?"
-# question = "How much does it cost to register a car?"
+# questions = ["Do I have to go in person to renew my driver's license?", "How much does it cost to register a car?", "What are the rules for license plates on my car?", "What kind of special vehicles are allowed on the roads?", "What are all the taxes for owning a car?"]
+# # question = "How to register car for DMV?"
+# # question = "How much does it cost to register a car?"
 
-for question in questions:
-    # final_state = app.invoke(
-    #     {"messages": [HumanMessage(content=roles_str), HumanMessage(content=question)]},
-    #     config={"configurable": {"thread_id": 42}}
-    # )
-    #checkpointer.clear()
-    print(f"\n Processing question: {question}")
-    final_state = app.invoke(
-        {"messages": [HumanMessage(content=roles_str), HumanMessage(content=question)]},
-        config={"configurable": {"thread_id": 42, "callbacks": None}}
-    )
+# for question in questions:
+#     # final_state = app.invoke(
+#     #     {"messages": [HumanMessage(content=roles_str), HumanMessage(content=question)]},
+#     #     config={"configurable": {"thread_id": 42}}
+#     # )
+#     #checkpointer.clear()
+#     print(f"\n Processing question: {question}")
+#     final_state = app.invoke(
+#         {"messages": [HumanMessage(content=roles_str), HumanMessage(content=question)]},
+#         config={"configurable": {"thread_id": 42, "callbacks": None}}
+#     )
 
-    torch.cuda.empty_cache()
+#     torch.cuda.empty_cache()
 
-    print("Done invoking \n")
-    print(final_state["messages"][-1].content)
+#     print("Done invoking \n")
+#     print(final_state["messages"][-1].content)
